@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage';
 import FindParkingPage from './pages/FindParkingPage';
 import ReservationForm from './components/ReservationForm';
 import OperatorDashboard from './pages/OperatorDashboard';
+import DriverDashboard from './pages/DriverDashboard';
 
 function AppContent() {
   const { currentTab } = useParking();
@@ -17,6 +18,8 @@ function AppContent() {
         {currentTab === 'home' && <HomePage />}
 
         {currentTab === 'find' && <FindParkingPage />}
+
+        {currentTab === 'driver' && <DriverDashboard />}
 
         {/* Member 3 Reservation Form */}
         {currentTab === 'reserve' && <ReservationForm />}

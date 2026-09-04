@@ -12,6 +12,8 @@ dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 5001;
+const DEMO_OWNER_EMAIL = 'owner@parksl.lk';
+const DEMO_OWNER_PASSWORD = 'Password123';
 
 app.use(cors());
 app.use(express.json());
@@ -88,23 +90,21 @@ app.get('/api/health', (_request, response) => {
   response.status(200).json({ message: 'ParkSL API is running' });
 });
 
-// Login Endpoint (supports email/password or phone login)
+// Driver login plus one fixed demo owner account for the operator dashboard.
 app.post('/api/auth/login', async (request, response) => {
   try {
-    const { email, password, phone } = request.body;
-
-    let user = null;
-    if (email && email.trim()) {
-      user = await User.findOne({ email: email.trim().toLowerCase() });
-      if (user && user.password && user.password !== password) {
-        return response.status(401).json({ message: 'Invalid credentials' });
-      }
-    } else if (phone && phone.trim()) {
-      user = await User.findOne({ phone: phone.trim() });
+    const { email, password } = request.body;
+    if (!email?.trim() || !password) {
+      return response.status(400).json({ message: 'Email and password are required.' });
     }
 
-    if (!user) {
-      return response.status(404).json({ message: 'User account not found' });
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail }).select('+password');
+    const isDemoOwner = normalizedEmail === DEMO_OWNER_EMAIL && password === DEMO_OWNER_PASSWORD && user?.role === 'OPERATOR';
+    const isValidDriver = user?.role === 'DRIVER' && await user.comparePassword(password);
+
+    if (!isDemoOwner && !isValidDriver) {
+      return response.status(401).json({ message: 'Incorrect email or password.' });
     }
 
     return response.status(200).json({
@@ -112,7 +112,6 @@ app.post('/api/auth/login', async (request, response) => {
       user: {
         id: user._id,
         name: user.name,
-        email: user.email || '',
         phone: user.phone,
         vehicleNumber: user.vehicleNumber || '',
         role: user.role,
@@ -126,32 +125,32 @@ app.post('/api/auth/login', async (request, response) => {
 // Registration Endpoint
 app.post('/api/auth/register', async (request, response) => {
   try {
-    const { name, phone, email, password, vehicleNumber = '', role } = request.body;
+    const { name, email, phone, password, vehicleNumber = '' } = request.body;
 
-    if (!name?.trim() || !phone?.trim() || !role) {
-      return response.status(400).json({ message: 'Name, phone number, and account type are required.' });
+    if (!name?.trim() || !email?.trim() || !phone?.trim() || !password || !vehicleNumber.trim()) {
+      return response.status(400).json({ message: 'Name, email, phone number, vehicle number, and password are required.' });
     }
 
-    if (!['DRIVER', 'OPERATOR'].includes(role)) {
-      return response.status(400).json({ message: 'Account type must be DRIVER or OPERATOR.' });
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+      return response.status(400).json({ message: 'Please enter a valid email address.' });
     }
 
-    if (role === 'DRIVER' && !vehicleNumber.trim()) {
-      return response.status(400).json({ message: 'Vehicle number is required for drivers.' });
+    if (!/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/.test(password)) {
+      return response.status(400).json({ message: 'Password must be at least 8 characters and include letters and numbers.' });
     }
 
-    const existingUser = await User.findOne({ phone: phone.trim() });
+    const existingUser = await User.findOne({ $or: [{ phone: phone.trim() }, { email: email.trim().toLowerCase() }] });
     if (existingUser) {
-      return response.status(409).json({ message: 'An account already exists for this phone number.' });
+      return response.status(409).json({ message: 'An account already exists with this email or phone number.' });
     }
 
     const user = await User.create({
       name: name.trim(),
+      email: email.trim().toLowerCase(),
       phone: phone.trim(),
-      email: email ? email.trim().toLowerCase() : '',
-      password: password || '',
+      password,
       vehicleNumber: vehicleNumber.trim(),
-      role,
+      role: 'DRIVER',
     });
 
     return response.status(201).json({
@@ -159,7 +158,6 @@ app.post('/api/auth/register', async (request, response) => {
       user: {
         id: user._id,
         name: user.name,
-        email: user.email,
         phone: user.phone,
         vehicleNumber: user.vehicleNumber,
         role: user.role,
