@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParking } from '../context/ParkingContext';
 import ProblemSection from '../components/ProblemSection';
-import { Search, ShieldCheck, ArrowRight, MapPin, CheckCircle, Sparkles } from 'lucide-react';
+import { Search, ArrowRight, MapPin, CheckCircle, Sparkles } from 'lucide-react';
 
 export default function HomePage() {
   const { setCurrentTab, user } = useParking();
@@ -25,22 +25,17 @@ export default function HomePage() {
             Eliminate parking headaches in Colombo, Malabe, and beyond. Real-time slot visibility and instant reservations at your fingertips.
           </p>
 
-          {/* CTA Buttons */}
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button
-              onClick={() => setCurrentTab('find')}
-              className="w-full sm:w-auto px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base rounded-xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 group cursor-pointer"
-            >
-              <Search size={18} /> Find Available Parking
-              <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-            </button>
-            <button
-              onClick={() => setCurrentTab('dashboard')}
-              className="w-full sm:w-auto px-8 py-3.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 font-bold text-base rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <ShieldCheck size={18} /> Operator Portal
-            </button>
-          </div>
+          {user?.role === 'DRIVER' && (
+            <div className="mt-8 flex items-center justify-center">
+              <button
+                onClick={() => setCurrentTab('find')}
+                className="w-full sm:w-auto px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base rounded-xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 group cursor-pointer"
+              >
+                <Search size={18} /> Find Available Parking
+                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+          )}
 
           {/* Live Quick Counters */}
           <div className="mt-14 max-w-3xl mx-auto grid grid-cols-3 divide-x divide-slate-200 bg-white border border-slate-200/80 rounded-2xl shadow-xl shadow-slate-100 p-5 sm:p-6">

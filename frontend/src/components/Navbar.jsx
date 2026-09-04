@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParking } from '../context/ParkingContext';
 import AuthModal from './AuthModal';
-import { Search, ShieldCheck, LogOut, Menu, X, User } from 'lucide-react';
+import { Car, LogOut, Menu, X, User } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logoutUser, currentTab, setCurrentTab } = useParking();
@@ -35,18 +35,11 @@ export default function Navbar() {
             >
               Home
             </button>
-            <button
-              onClick={() => setCurrentTab('find')}
-              className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${currentTab === 'find' ? 'text-emerald-700 bg-emerald-50 font-bold' : 'hover:text-slate-900 hover:bg-slate-50'}`}
-            >
-              <Search size={16} /> Find Parking
-            </button>
-            <button
-              onClick={() => setCurrentTab('dashboard')}
-              className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${currentTab === 'dashboard' ? 'text-emerald-700 bg-emerald-50 font-bold' : 'hover:text-slate-900 hover:bg-slate-50'}`}
-            >
-              <ShieldCheck size={16} /> Owner Dashboard
-            </button>
+            {user?.role === 'DRIVER' && (
+              <button onClick={() => setCurrentTab('driver')} className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${currentTab === 'driver' ? 'text-emerald-700 bg-emerald-50 font-bold' : 'hover:text-slate-900 hover:bg-slate-50'}`}>
+                <Car size={16} /> My Dashboard
+              </button>
+            )}
           </nav>
 
           {/* User Auth Section */}
@@ -98,18 +91,9 @@ export default function Navbar() {
             >
               Home
             </button>
-            <button 
-              onClick={() => { setCurrentTab('find'); setMobileMenuOpen(false); }}
-              className="w-full text-left py-2 font-medium text-slate-700"
-            >
-              Find Parking
-            </button>
-            <button 
-              onClick={() => { setCurrentTab('dashboard'); setMobileMenuOpen(false); }}
-              className="w-full text-left py-2 font-medium text-slate-700"
-            >
-              Owner Dashboard
-            </button>
+            {user?.role === 'DRIVER' && (
+              <button onClick={() => { setCurrentTab('driver'); setMobileMenuOpen(false); }} className="w-full text-left py-2 font-medium text-slate-700">My Dashboard</button>
+            )}
             <div className="pt-3 border-t border-slate-100">
               {user ? (
                 <div className="flex justify-between items-center py-2">

@@ -1,290 +1,84 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import axios from 'axios';
+import { Car, Lock, Mail, Phone, User, X } from 'lucide-react';
 import { useParking } from '../context/ParkingContext';
-import { X, User, Phone, Car, ShieldCheck, Mail, Lock, KeyRound } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const passwordRule = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
 
 export default function AuthModal({ isOpen, onClose }) {
   const { loginUser } = useParking();
-  const [activeTab, setActiveTab] = useState('login'); // 'login' or 'register'
-  
-  const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    password: '',
-    vehicleNumber: '',
-    role: 'DRIVER' // 'DRIVER' or 'OPERATOR'
-  });
-
+  const [mode, setMode] = useState('login');
+  const [form, setForm] = useState({ name: '', email: '', phone: '', vehicleNumber: '', password: '', confirmPassword: '' });
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
+  const update = (key, value) => setForm((current) => ({ ...current, [key]: value }));
   const validate = () => {
-    const errs = {};
-
-    if (activeTab === 'login') {
-      if (!formData.email.trim() && !formData.phone.trim()) {
-        errs.loginId = 'Please enter your Email or Mobile Number';
-      }
-      if (formData.email.trim() && !formData.password) {
-        errs.password = 'Password is required for email login';
-      }
+    const next = {};
+    const phoneRule = /^(?:0|94|\+94)?(7[0-9]{8})$/;
+    if (mode === 'login') {
+      if (!form.email.trim()) next.email = 'Email is required.';
     } else {
-      if (!formData.name.trim()) errs.name = 'Please enter your full name';
-      
-      const phoneRegex = /^(?:0|94|\+94)?(7[0-9]{8})$/;
-      if (!formData.phone.trim()) {
-        errs.phone = 'Mobile number is required';
-      } else if (!phoneRegex.test(formData.phone.replace(/\s+/g, ''))) {
-        errs.phone = 'Enter a valid Sri Lankan mobile number (e.g., 0771234567)';
-      }
-
-      if (formData.role === 'DRIVER') {
-        const vehicleRegex = /^[A-Z]{2,3}-[0-9]{4}$|^[0-9]{2,3}-[0-9]{4}$|^[A-Z]{2}\s[A-Z]{2,3}-[0-9]{4}$/i;
-        if (!formData.vehicleNumber.trim()) {
-          errs.vehicleNumber = 'Vehicle number is required for drivers';
-        } else if (!vehicleRegex.test(formData.vehicleNumber.trim())) {
-          errs.vehicleNumber = 'Format example: CAB-1234, WP BD-5678, or 65-1234';
-        }
-      }
+      if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) next.email = 'Use a valid email address.';
+      if (!form.phone.trim()) next.phone = 'Mobile number is required.';
+      else if (!phoneRule.test(form.phone.replace(/\s+/g, ''))) next.phone = 'Use a valid Sri Lankan mobile number, e.g. 0771234567.';
     }
-
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
+    if (!form.password) next.password = 'Password is required.';
+    else if (!passwordRule.test(form.password)) next.password = 'Use at least 8 characters with letters and numbers.';
+    if (mode === 'register') {
+      if (!form.name.trim()) next.name = 'Please enter your full name.';
+      if (!form.vehicleNumber.trim()) next.vehicleNumber = 'Vehicle number is required.';
+      if (form.password !== form.confirmPassword) next.confirmPassword = 'Passwords do not match.';
+    }
+    setErrors(next);
+    return Object.keys(next).length === 0;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const submit = async (event) => {
+    event.preventDefault();
     if (!validate()) return;
-
     setSubmitError('');
     setIsSubmitting(true);
-
     try {
-      if (activeTab === 'login') {
-        const payload = formData.email.trim() 
-          ? { email: formData.email.trim(), password: formData.password }
-          : { phone: formData.phone.trim() };
-
-        const response = await axios.post(`${API_BASE}/api/auth/login`, payload);
-        loginUser(response.data.user);
-        onClose();
-      } else {
-        const response = await axios.post(`${API_BASE}/api/auth/register`, formData);
-        loginUser(response.data.user);
-        onClose();
-      }
+      const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
+      const payload = mode === 'login' ? { email: form.email, password: form.password } : form;
+      const { data } = await axios.post(`${API_BASE}${endpoint}`, payload);
+      loginUser(data.user);
+      onClose();
     } catch (error) {
-      setSubmitError(error.response?.data?.message || 'Authentication failed. Please try again.');
+      setSubmitError(error.response?.data?.message || 'Could not connect to ParkSL. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const quickFillOwner = () => {
-    setActiveTab('login');
-    setFormData({
-      ...formData,
-      email: 'owner@parksl.lk',
-      password: 'Password123',
-      role: 'OPERATOR'
-    });
-    setErrors({});
-    setSubmitError('');
-  };
+  const inputClass = 'w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500';
+  const field = (label, key, type, Icon, placeholder) => (
+    <div>
+      <label className="mb-1 block text-xs font-semibold text-slate-700">{label}</label>
+      <div className="relative"><Icon size={16} className="absolute left-3 top-3 text-slate-400" /><input className={inputClass} type={type} value={form[key]} placeholder={placeholder} onChange={(event) => update(key, event.target.value)} /></div>
+      {errors[key] && <p className="mt-1 text-xs font-medium text-rose-600">{errors[key]}</p>}
+    </div>
+  );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-slate-100">
-        
-        {/* Header */}
-        <div className="bg-slate-900 text-white p-6 flex justify-between items-center">
-          <div>
-            <h3 className="text-xl font-bold">{activeTab === 'login' ? 'Sign In to ParkSL' : 'Join ParkSL'}</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Smart Parking for Sri Lanka</p>
-          </div>
-          <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Tab Switcher */}
-        <div className="flex border-b border-slate-200 bg-slate-50">
-          <button
-            type="button"
-            onClick={() => { setActiveTab('login'); setSubmitError(''); }}
-            className={`flex-1 py-3 text-xs font-bold transition-all border-b-2 ${
-              activeTab === 'login' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            onClick={() => { setActiveTab('register'); setSubmitError(''); }}
-            className={`flex-1 py-3 text-xs font-bold transition-all border-b-2 ${
-              activeTab === 'register' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            Register Account
-          </button>
-        </div>
-
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-
-          {activeTab === 'login' ? (
-            <>
-              {/* Email / Username */}
-              <div>
-                <label className="text-xs font-medium text-slate-700 block mb-1">Email Address or Mobile</label>
-                <div className="relative">
-                  <Mail size={16} className="absolute left-3 top-3 text-slate-400" />
-                  <input
-                    type="text"
-                    value={formData.email || formData.phone}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val.includes('@')) {
-                        setFormData({ ...formData, email: val, phone: '' });
-                      } else {
-                        setFormData({ ...formData, phone: val, email: '' });
-                      }
-                    }}
-                    placeholder="owner@parksl.lk or 0771234567"
-                    className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  />
-                </div>
-                {errors.loginId && <p className="text-rose-500 text-xs mt-1 font-medium">{errors.loginId}</p>}
-              </div>
-
-              {/* Password */}
-              <div>
-                <label className="text-xs font-medium text-slate-700 block mb-1">Password</label>
-                <div className="relative">
-                  <Lock size={16} className="absolute left-3 top-3 text-slate-400" />
-                  <input
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder="Enter password"
-                    className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  />
-                </div>
-                {errors.password && <p className="text-rose-500 text-xs mt-1 font-medium">{errors.password}</p>}
-              </div>
-
-              {/* Quick Fill Owner Credentials Banner */}
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <KeyRound size={16} className="text-emerald-700" />
-                  <div>
-                    <p className="text-xs font-bold text-emerald-900">Parking Owner Credentials</p>
-                    <p className="text-[11px] text-emerald-700">owner@parksl.lk / Password123</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={quickFillOwner}
-                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer"
-                >
-                  Quick Fill
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Role Switcher */}
-              <div>
-                <label className="text-xs font-semibold text-slate-600 block mb-1.5 uppercase tracking-wide">Account Type</label>
-                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, role: 'DRIVER' })}
-                    className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                      formData.role === 'DRIVER' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    <Car size={14} /> Driver
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, role: 'OPERATOR' })}
-                    className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                      formData.role === 'OPERATOR' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    <ShieldCheck size={14} /> Parking Owner
-                  </button>
-                </div>
-              </div>
-
-              {/* Full Name */}
-              <div>
-                <label className="text-xs font-medium text-slate-700 block mb-1">Full Name</label>
-                <div className="relative">
-                  <User size={16} className="absolute left-3 top-3 text-slate-400" />
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g. Kasun Perera"
-                    className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  />
-                </div>
-                {errors.name && <p className="text-rose-500 text-xs mt-1 font-medium">{errors.name}</p>}
-              </div>
-
-              {/* Mobile Number */}
-              <div>
-                <label className="text-xs font-medium text-slate-700 block mb-1">Sri Lankan Mobile Number</label>
-                <div className="relative">
-                  <Phone size={16} className="absolute left-3 top-3 text-slate-400" />
-                  <input
-                    type="text"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="0771234567"
-                    className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  />
-                </div>
-                {errors.phone && <p className="text-rose-500 text-xs mt-1 font-medium">{errors.phone}</p>}
-              </div>
-
-              {/* Vehicle Number (Shown for drivers) */}
-              {formData.role === 'DRIVER' && (
-                <div>
-                  <label className="text-xs font-medium text-slate-700 block mb-1">Vehicle License Plate</label>
-                  <div className="relative">
-                    <Car size={16} className="absolute left-3 top-3 text-slate-400" />
-                    <input
-                      type="text"
-                      value={formData.vehicleNumber}
-                      onChange={(e) => setFormData({ ...formData, vehicleNumber: e.target.value })}
-                      placeholder="e.g. CAB-1234 or WP BD-5678"
-                      className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-xl uppercase focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                    />
-                  </div>
-                  {errors.vehicleNumber && <p className="text-rose-500 text-xs mt-1 font-medium">{errors.vehicleNumber}</p>}
-                </div>
-              )}
-            </>
-          )}
-
-          {submitError && <p className="text-rose-600 text-xs font-medium bg-rose-50 p-2.5 rounded-lg border border-rose-200">{submitError}</p>}
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl shadow-lg shadow-emerald-600/20 transition-all cursor-pointer"
-          >
-            {isSubmitting ? 'Processing...' : activeTab === 'login' ? 'Sign In' : 'Create Free Account'}
-          </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between bg-slate-900 p-6 text-white"><div><h2 className="text-xl font-black">{mode === 'login' ? 'Driver Sign In' : 'Driver Registration'}</h2><p className="mt-1 text-xs text-slate-400">ParkSL smart parking</p></div><button onClick={onClose} className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-white"><X size={20} /></button></div>
+        <div className="flex border-b border-slate-200"><button type="button" onClick={() => { setMode('login'); setErrors({}); setSubmitError(''); }} className={`flex-1 py-3 text-xs font-black ${mode === 'login' ? 'border-b-2 border-emerald-600 text-emerald-700' : 'text-slate-500'}`}>Sign In</button><button type="button" onClick={() => { setMode('register'); setErrors({}); setSubmitError(''); }} className={`flex-1 py-3 text-xs font-black ${mode === 'register' ? 'border-b-2 border-emerald-600 text-emerald-700' : 'text-slate-500'}`}>Register</button></div>
+        <form onSubmit={submit} className="space-y-4 p-6">
+          {mode === 'register' && field('Full Name', 'name', 'text', User, 'e.g. Kasun Perera')}
+          {field('Email Address', 'email', 'email', Mail, 'you@example.com')}
+          {mode === 'register' && field('Sri Lankan Mobile Number', 'phone', 'tel', Phone, '0771234567')}
+          {mode === 'register' && field('Vehicle License Plate', 'vehicleNumber', 'text', Car, 'CAB-1234')}
+          {field('Password', 'password', 'password', Lock, '8+ characters, letters and numbers')}
+          {mode === 'register' && field('Confirm Password', 'confirmPassword', 'password', Lock, 'Re-enter password')}
+          {submitError && <p className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs font-medium text-rose-700">{submitError}</p>}
+          <button disabled={isSubmitting} className="w-full rounded-xl bg-emerald-600 py-3 text-sm font-black text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-400">{isSubmitting ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Driver Account'}</button>
         </form>
       </div>
     </div>

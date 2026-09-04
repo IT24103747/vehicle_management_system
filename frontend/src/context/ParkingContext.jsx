@@ -20,6 +20,7 @@ export const ParkingProvider = ({ children }) => {
       if (savedUser) {
         const parsed = JSON.parse(savedUser);
         if (parsed.role === 'OPERATOR') return 'dashboard';
+        if (parsed.role === 'DRIVER') return 'driver';
       }
     } catch {
       // fallback
@@ -42,6 +43,8 @@ export const ParkingProvider = ({ children }) => {
     setUser(userData);
     if (userData?.role === 'OPERATOR') {
       setCurrentTab('dashboard');
+    } else if (userData?.role === 'DRIVER') {
+      setCurrentTab('driver');
     }
   };
 
