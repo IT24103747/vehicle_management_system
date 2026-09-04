@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
 const ParkingContext = createContext();
@@ -81,6 +81,9 @@ export const ParkingProvider = ({ children }) => {
     return res.data;
   };
 
+  const fetchParkingLocations = fetchOwnerLocations;
+  const fetchParkingSlots = fetchLocationSlots;
+
   const addSlotToLocation = async (locationId) => {
     const res = await axios.post(`${API_BASE}/api/owner/locations/${locationId}/slots`);
     return res.data;
@@ -119,6 +122,8 @@ export const ParkingProvider = ({ children }) => {
       setSelectedSlot,
       fetchOwnerStats,
       fetchOwnerLocations,
+      fetchParkingLocations,
+      fetchParkingSlots,
       addLocation,
       updateLocation,
       deleteLocation,
@@ -134,4 +139,5 @@ export const ParkingProvider = ({ children }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useParking = () => useContext(ParkingContext);
