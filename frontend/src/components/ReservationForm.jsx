@@ -1,10 +1,9 @@
-import { useState, useId } from 'react';
+import { useState } from 'react';
 import { 
   Car, 
   Clock, 
   Phone, 
   User, 
-  CheckCircle, 
   AlertCircle, 
   Calendar, 
   MapPin, 
@@ -20,7 +19,7 @@ export default function ReservationForm() {
     selectedLocation, 
     selectedSlot, 
     setCurrentTab, 
-    updateSlotStatus,
+    createReservation,
     user 
   } = useParking();
 
@@ -92,7 +91,7 @@ export default function ReservationForm() {
 
     // Filter out null values
     const activeErrors = Object.fromEntries(
-      Object.entries(nextErrors).filter(([_, msg]) => msg !== null)
+      Object.entries(nextErrors).filter(([, msg]) => msg !== null)
     );
 
     setErrors(activeErrors);
@@ -134,44 +133,45 @@ export default function ReservationForm() {
 
     setIsSubmitting(true);
     try {
-      // 1. Generate unique ticket ID
-      const ticketId = `PS${Math.floor(1000 + Math.random() * 9000)}`;
-
-      // 2. Update the slot status to RESERVED in context / API
-      if (selectedSlot?.id && updateSlotStatus) {
-        try {
-          await updateSlotStatus(selectedSlot.id, 'RESERVED');
-        } catch (err) {
-          console.warn('Backend slot status sync note:', err?.message);
-        }
-      }
-
-      // 3. Set confirmed reservation receipt
-      const reservationData = {
-        ticketId,
-        locationName: selectedLocation?.name || 'ParkSL Hub',
-        address: selectedLocation?.address || selectedLocation?.city || 'Colombo',
-        slotNumber: selectedSlot?.slotNumber || 'P01',
+      const { reservation } = await createReservation({
+        userId: user?.id,
+        locationId: selectedLocation.id,
+        slotId: selectedSlot.id,
         driverName: driverName.trim(),
         driverPhone: driverPhone.trim(),
         vehicleNumber: vehicleNumber.trim().toUpperCase(),
         durationHours: Number(durationHours),
-        hourlyRate,
-        totalCost,
+      });
+
+      const location = reservation.locationId || selectedLocation;
+      const slot = reservation.slotId || selectedSlot;
+      const receiptData = {
+        id: reservation._id,
+        ticketId: reservation.ticketId,
+        locationName: location.name || selectedLocation?.name || 'ParkSL Hub',
+        address: location.address || location.city || selectedLocation?.address || selectedLocation?.city || 'Colombo',
+        slotNumber: slot.slotNumber || selectedSlot?.slotNumber || 'P01',
+        driverName: driverName.trim(),
+        driverPhone: driverPhone.trim(),
+        vehicleNumber: vehicleNumber.trim().toUpperCase(),
+        durationHours: reservation.durationHours,
+        hourlyRate: location.pricePerHour || hourlyRate,
+        totalCost: reservation.totalCost,
+        status: reservation.status,
         createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
 
       // Persist to localStorage for driver records
       try {
         const existing = JSON.parse(localStorage.getItem('parksl_my_reservations') || '[]');
-        localStorage.setItem('parksl_my_reservations', JSON.stringify([reservationData, ...existing]));
+        localStorage.setItem('parksl_my_reservations', JSON.stringify([receiptData, ...existing]));
       } catch (err) {
         console.warn('LocalStorage save error:', err);
       }
 
-      setConfirmedReservation(reservationData);
+      setConfirmedReservation(receiptData);
     } catch (err) {
-      setErrors({ submit: 'Could not complete reservation. Please try again.' });
+      setErrors({ submit: err.response?.data?.message || 'Could not complete reservation. Please try again.' });
     } finally {
       setIsSubmitting(false);
     }

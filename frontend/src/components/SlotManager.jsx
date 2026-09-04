@@ -1,8 +1,22 @@
-import React from 'react';
-import { Plus, Trash2, CheckCircle2, AlertCircle, XCircle } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, AlertCircle, XCircle, Car, Phone, Ticket, User } from 'lucide-react';
 
-export default function SlotManager({ location, slots, onAddSlot, onDeleteSlot, onToggleStatus, onClose }) {
+function getId(value) {
+  return value?._id || value?.id || value;
+}
+
+export default function SlotManager({ location, slots, reservations = [], onAddSlot, onDeleteSlot, onToggleStatus, onClose }) {
   if (!location) return null;
+
+  const reservationBySlotId = reservations.reduce((lookup, reservation) => {
+    if (reservation.status !== 'RESERVED' && reservation.status !== 'ACTIVE') return lookup;
+
+    const slotId = getId(reservation.slotId);
+    if (slotId) {
+      lookup[slotId] = reservation;
+    }
+
+    return lookup;
+  }, {});
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
@@ -45,6 +59,8 @@ export default function SlotManager({ location, slots, onAddSlot, onDeleteSlot, 
             const isAvailable = slot.status === 'AVAILABLE';
             const isOccupied = slot.status === 'OCCUPIED';
             const isReserved = slot.status === 'RESERVED';
+            const slotReservation = reservationBySlotId[slot._id];
+            const hasActiveReservation = Boolean(slotReservation);
 
             return (
               <div
@@ -74,6 +90,32 @@ export default function SlotManager({ location, slots, onAddSlot, onDeleteSlot, 
                   </span>
                 </div>
 
+                {(isReserved || slotReservation) && (
+                  <div className="rounded-xl border border-amber-200 bg-white/80 p-3 text-xs text-slate-700">
+                    {slotReservation ? (
+                      <div className="space-y-2">
+                        <p className="flex items-center gap-1.5 font-black text-amber-800">
+                          <Ticket size={13} /> {slotReservation.ticketId}
+                        </p>
+                        <p className="flex items-center gap-1.5 font-bold">
+                          <User size={13} className="text-slate-400" />
+                          {slotReservation.driverName || slotReservation.userId?.name || 'Driver'}
+                        </p>
+                        <p className="flex items-center gap-1.5 font-medium text-slate-500">
+                          <Phone size={13} className="text-slate-400" />
+                          {slotReservation.driverPhone || slotReservation.userId?.phone || 'No phone added'}
+                        </p>
+                        <p className="flex items-center gap-1.5 font-mono font-black text-slate-900">
+                          <Car size={13} className="text-slate-400" />
+                          {slotReservation.vehicleNumber || slotReservation.userId?.vehicleNumber || 'Vehicle pending'}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="font-semibold text-amber-700">Reserved slot details will appear after a reservation record is created.</p>
+                    )}
+                  </div>
+                )}
+
                 <div className="pt-2 flex items-center justify-between gap-2 border-t border-slate-200/50">
                   {/* Status toggle button */}
                   {isAvailable && (
@@ -84,7 +126,7 @@ export default function SlotManager({ location, slots, onAddSlot, onDeleteSlot, 
                       Mark Occupied
                     </button>
                   )}
-                  {isOccupied && (
+                  {isOccupied && !hasActiveReservation && (
                     <button
                       onClick={() => onToggleStatus(slot._id, 'AVAILABLE')}
                       className="text-xs px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition-colors cursor-pointer"
@@ -92,9 +134,9 @@ export default function SlotManager({ location, slots, onAddSlot, onDeleteSlot, 
                       Mark Available
                     </button>
                   )}
-                  {isReserved && (
+                  {(isReserved || hasActiveReservation) && (
                     <span className="text-[11px] text-amber-700 font-medium italic">
-                      Use Reservations tab to check-in
+                      Use Reservations tab to update booking
                     </span>
                   )}
 
