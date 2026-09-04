@@ -6,12 +6,15 @@
 
 ---
 1. Git Repository Link
-   [PASTE GITHUB LINK HERE]
+(https://github.com/IT24103747/vehicle_management_system)](https://github.com/IT24103747/vehicle_management_system)](https://github.com/IT24103747/vehicle_management_system)
 
 2. Deployed Application Link
-   [PASTE VERCEL/NETLIFY LINK HERE]
+3. 
+vehicle-management-system-pi-five.vercel.app
 
-3. Two-Minute Demonstration Video Link
+https://vehicle-management-system-uqfr.onrender.com
+
+4. Two-Minute Demonstration Video Link
    [PASTE VIDEO LINK HERE]
 
 
