@@ -86,6 +86,10 @@ async function seedInitialData() {
 // AUTH ENDPOINTS
 // ----------------------------------------------------
 
+app.get('/', (_request, response) => {
+  response.status(200).json({ message: 'ParkSL API is running', healthCheck: '/api/health' });
+});
+
 app.get('/api/health', (_request, response) => {
   response.status(200).json({ message: 'ParkSL API is running' });
 });
