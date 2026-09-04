@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import axios from 'axios';
 
 const ParkingContext = createContext();
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 export const ParkingProvider = ({ children }) => {
-  // Current logged-in user (Driver or Operator)
   const [user, setUser] = useState(() => {
     try {
       const saved = localStorage.getItem('parksl_user');
@@ -13,14 +14,22 @@ export const ParkingProvider = ({ children }) => {
     }
   });
 
-  // Active navigation tab: 'home' | 'find' | 'reserve' | 'dashboard'
-  const [currentTab, setCurrentTab] = useState('home');
+  const [currentTab, setCurrentTab] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem('parksl_user');
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        if (parsed.role === 'OPERATOR') return 'dashboard';
+      }
+    } catch {
+      // fallback
+    }
+    return 'home';
+  });
 
-  // Selected slot state (for passing between Member 2 and Member 3)
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
 
-  // Sync user state with localStorage
   useEffect(() => {
     if (user) {
       localStorage.setItem('parksl_user', JSON.stringify(user));
@@ -31,10 +40,70 @@ export const ParkingProvider = ({ children }) => {
 
   const loginUser = (userData) => {
     setUser(userData);
+    if (userData?.role === 'OPERATOR') {
+      setCurrentTab('dashboard');
+    }
   };
 
   const logoutUser = () => {
     setUser(null);
+    setCurrentTab('home');
+  };
+
+  // API Helpers for Member 4
+  const fetchOwnerStats = async () => {
+    const res = await axios.get(`${API_BASE}/api/owner/stats`);
+    return res.data;
+  };
+
+  const fetchOwnerLocations = async () => {
+    const res = await axios.get(`${API_BASE}/api/owner/locations`);
+    return res.data;
+  };
+
+  const addLocation = async (locationData) => {
+    const res = await axios.post(`${API_BASE}/api/owner/locations`, locationData);
+    return res.data;
+  };
+
+  const updateLocation = async (id, locationData) => {
+    const res = await axios.put(`${API_BASE}/api/owner/locations/${id}`, locationData);
+    return res.data;
+  };
+
+  const deleteLocation = async (id) => {
+    const res = await axios.delete(`${API_BASE}/api/owner/locations/${id}`);
+    return res.data;
+  };
+
+  const fetchLocationSlots = async (locationId) => {
+    const res = await axios.get(`${API_BASE}/api/owner/locations/${locationId}/slots`);
+    return res.data;
+  };
+
+  const addSlotToLocation = async (locationId) => {
+    const res = await axios.post(`${API_BASE}/api/owner/locations/${locationId}/slots`);
+    return res.data;
+  };
+
+  const deleteSlot = async (slotId) => {
+    const res = await axios.delete(`${API_BASE}/api/owner/slots/${slotId}`);
+    return res.data;
+  };
+
+  const updateSlotStatus = async (slotId, status) => {
+    const res = await axios.patch(`${API_BASE}/api/owner/slots/${slotId}/status`, { status });
+    return res.data;
+  };
+
+  const fetchReservations = async () => {
+    const res = await axios.get(`${API_BASE}/api/owner/reservations`);
+    return res.data;
+  };
+
+  const updateReservationStatus = async (reservationId, status) => {
+    const res = await axios.patch(`${API_BASE}/api/owner/reservations/${reservationId}/status`, { status });
+    return res.data;
   };
 
   return (
@@ -48,6 +117,17 @@ export const ParkingProvider = ({ children }) => {
       setSelectedLocation,
       selectedSlot,
       setSelectedSlot,
+      fetchOwnerStats,
+      fetchOwnerLocations,
+      addLocation,
+      updateLocation,
+      deleteLocation,
+      fetchLocationSlots,
+      addSlotToLocation,
+      deleteSlot,
+      updateSlotStatus,
+      fetchReservations,
+      updateReservationStatus,
     }}>
       {children}
     </ParkingContext.Provider>
