@@ -102,6 +102,21 @@ export const ParkingProvider = ({ children }) => {
     return res.data;
   };
 
+  const createReservation = async (reservationData) => {
+    const res = await axios.post(`${API_BASE}/api/reservations`, reservationData);
+    return res.data;
+  };
+
+  const fetchDriverReservations = async (driver = user) => {
+    const params = {
+      userId: driver?.id,
+      phone: driver?.phone,
+      vehicleNumber: driver?.vehicleNumber,
+    };
+    const res = await axios.get(`${API_BASE}/api/driver/reservations`, { params });
+    return res.data;
+  };
+
   const fetchReservations = async () => {
     const res = await axios.get(`${API_BASE}/api/owner/reservations`);
     return res.data;
@@ -134,6 +149,8 @@ export const ParkingProvider = ({ children }) => {
       addSlotToLocation,
       deleteSlot,
       updateSlotStatus,
+      createReservation,
+      fetchDriverReservations,
       fetchReservations,
       updateReservationStatus,
     }}>

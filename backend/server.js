@@ -180,6 +180,114 @@ app.post('/api/auth/register', async (request, response) => {
 });
 
 // ----------------------------------------------------
+// DRIVER RESERVATION ENDPOINTS (Member 3 integration)
+// ----------------------------------------------------
+
+async function generateTicketId() {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const ticketId = `PS${Math.floor(1000 + Math.random() * 9000)}`;
+    const exists = await Reservation.exists({ ticketId });
+    if (!exists) return ticketId;
+  }
+
+  return `PS${Date.now().toString().slice(-6)}`;
+}
+
+app.post('/api/reservations', async (request, response) => {
+  try {
+    const {
+      userId,
+      locationId,
+      slotId,
+      driverName,
+      driverPhone,
+      vehicleNumber,
+      durationHours,
+    } = request.body;
+
+    if (!locationId || !slotId || !driverName?.trim() || !driverPhone?.trim() || !vehicleNumber?.trim()) {
+      return response.status(400).json({ message: 'Location, slot, driver, phone, and vehicle details are required.' });
+    }
+
+    const hours = Number(durationHours);
+    if (!Number.isInteger(hours) || hours < 1 || hours > 12) {
+      return response.status(400).json({ message: 'Duration must be an integer between 1 and 12 hours.' });
+    }
+
+    const [location, slot] = await Promise.all([
+      ParkingLocation.findById(locationId),
+      ParkingSlot.findById(slotId),
+    ]);
+
+    if (!location) {
+      return response.status(404).json({ message: 'Parking location not found.' });
+    }
+
+    if (!slot || slot.locationId.toString() !== location._id.toString()) {
+      return response.status(404).json({ message: 'Parking slot not found for this location.' });
+    }
+
+    if (slot.status !== 'AVAILABLE') {
+      return response.status(409).json({ message: 'This parking slot is no longer available.' });
+    }
+
+    const reservation = await Reservation.create({
+      ticketId: await generateTicketId(),
+      userId: userId || undefined,
+      slotId: slot._id,
+      locationId: location._id,
+      driverName: driverName.trim(),
+      driverPhone: driverPhone.trim(),
+      vehicleNumber: vehicleNumber.trim().toUpperCase(),
+      durationHours: hours,
+      totalCost: hours * Number(location.pricePerHour),
+      status: 'RESERVED',
+    });
+
+    slot.status = 'RESERVED';
+    await slot.save();
+
+    const populatedReservation = await Reservation.findById(reservation._id)
+      .populate('locationId', 'name city address pricePerHour')
+      .populate('slotId', 'slotNumber status');
+
+    return response.status(201).json({
+      message: 'Reservation created successfully.',
+      reservation: populatedReservation,
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return response.status(409).json({ message: 'Ticket ID collision. Please try again.' });
+    }
+    return response.status(500).json({ message: 'Could not create reservation', error: error.message });
+  }
+});
+
+app.get('/api/driver/reservations', async (request, response) => {
+  try {
+    const { userId, phone, vehicleNumber } = request.query;
+    const filters = [];
+
+    if (userId) filters.push({ userId });
+    if (phone) filters.push({ driverPhone: phone.trim() });
+    if (vehicleNumber) filters.push({ vehicleNumber: vehicleNumber.trim().toUpperCase() });
+
+    if (filters.length === 0) {
+      return response.status(400).json({ message: 'Driver identifier is required.' });
+    }
+
+    const reservations = await Reservation.find({ $or: filters })
+      .populate('locationId', 'name city address pricePerHour')
+      .populate('slotId', 'slotNumber status')
+      .sort({ createdAt: -1 });
+
+    return response.status(200).json(reservations);
+  } catch (error) {
+    return response.status(500).json({ message: 'Error fetching driver reservations', error: error.message });
+  }
+});
+
+// ----------------------------------------------------
 // OWNER / OPERATOR ENDPOINTS (Member 4)
 // ----------------------------------------------------
 
@@ -410,6 +518,7 @@ app.patch('/api/owner/slots/:slotId/status', async (request, response) => {
 app.get('/api/owner/reservations', async (request, response) => {
   try {
     const reservations = await Reservation.find()
+      .populate('userId', 'name email phone vehicleNumber')
       .populate('locationId', 'name city address')
       .populate('slotId', 'slotNumber status')
       .sort({ createdAt: -1 });

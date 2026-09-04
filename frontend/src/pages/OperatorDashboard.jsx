@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParking } from '../context/ParkingContext';
 import OperatorStats from '../components/OperatorStats';
 import AddLocationModal from '../components/AddLocationModal';
@@ -64,7 +64,9 @@ export default function OperatorDashboard() {
   };
 
   useEffect(() => {
-    loadDashboardData();
+    const timer = window.setTimeout(loadDashboardData, 0);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Handlers for Locations
@@ -200,6 +202,7 @@ export default function OperatorDashboard() {
               <SlotManager
                 location={activeSlotLocation}
                 slots={activeSlots}
+                reservations={reservations}
                 onAddSlot={handleAddSlot}
                 onDeleteSlot={handleDeleteSlot}
                 onToggleStatus={handleToggleSlotStatus}
