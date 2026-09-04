@@ -14,14 +14,15 @@
 3. Two-Minute Demonstration Video Link
    [PASTE VIDEO LINK HERE]
 
-4. Team Members
 
-   Name                         Student ID
-   ------------------------------------------------
-   Minduli H.B.C             IT24103747
-   Daluwatta D.A             IT24104161
-   Dolamulla H.D.K.P.D       IT24103522
-   Semasinghe S.M.B.C        IT24103525
+## 👥 Team Members & Contributions
+
+| Name | Student ID | Contribution |
+|---|---|---|
+| Minduli H.B.C | IT24103747 | Parking Finder, Search & Filters  |
+| Daluwatta D.A | IT24104161 |  Home Page, UI Shell & Authentication |
+| Dolamulla H.D.K.P.D | IT24103522 |  Parking Owner & Parking Management |
+| Semasinghe S.M.B.C | IT24103525 | Parking Reservation |
 
 ---
 
