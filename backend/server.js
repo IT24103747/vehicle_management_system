@@ -100,7 +100,11 @@ app.post('/api/auth/login', async (request, response) => {
 
     const normalizedEmail = email.trim().toLowerCase();
     const user = await User.findOne({ email: normalizedEmail }).select('+password');
-    const isDemoOwner = normalizedEmail === DEMO_OWNER_EMAIL && password === DEMO_OWNER_PASSWORD && user?.role === 'OPERATOR';
+    const isDemoOwner =
+      normalizedEmail === DEMO_OWNER_EMAIL
+      && password === DEMO_OWNER_PASSWORD
+      && user?.role === 'OPERATOR'
+      && (user.password === DEMO_OWNER_PASSWORD || await user.comparePassword(password));
     const isValidDriver = user?.role === 'DRIVER' && await user.comparePassword(password);
 
     if (!isDemoOwner && !isValidDriver) {
