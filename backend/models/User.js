@@ -7,6 +7,16 @@ const userSchema = new mongoose.Schema(
       required: [true, 'Name is required'],
       trim: true,
     },
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      sparse: true,
+    },
+    password: {
+      type: String,
+      default: '',
+    },
     phone: {
       type: String,
       required: [true, 'Phone number is required'],
@@ -29,3 +39,4 @@ const userSchema = new mongoose.Schema(
 );
 
 export default mongoose.model('User', userSchema);
+

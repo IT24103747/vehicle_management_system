@@ -3,7 +3,8 @@ import { ParkingProvider, useParking } from './context/ParkingContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
-import { Search, CalendarCheck, ShieldCheck } from 'lucide-react';
+import OperatorDashboard from './pages/OperatorDashboard';
+import { Search, CalendarCheck } from 'lucide-react';
 
 function AppContent() {
   const { currentTab, setCurrentTab } = useParking();
@@ -57,26 +58,8 @@ function AppContent() {
           </div>
         )}
 
-        {/* Placeholder tab for Member 4 */}
-        {currentTab === 'dashboard' && (
-          <div className="max-w-4xl mx-auto my-16 p-8 bg-white border border-slate-200 rounded-3xl shadow-sm text-center">
-            <div className="w-16 h-16 bg-purple-100 text-purple-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <ShieldCheck size={32} />
-            </div>
-            <h2 className="text-2xl font-black text-slate-900">Operator Dashboard View</h2>
-            <p className="text-slate-600 mt-2 max-w-md mx-auto text-sm">
-              Member 4 will plug in the live slot management panel, status toggles (Available ↔ Occupied), and reservations list here!
-            </p>
-            <div className="mt-6 flex justify-center gap-3">
-              <button
-                onClick={() => setCurrentTab('home')}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold cursor-pointer"
-              >
-                Back to Home
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Member 4 Operator Dashboard */}
+        {currentTab === 'dashboard' && <OperatorDashboard />}
       </main>
 
       <Footer />
